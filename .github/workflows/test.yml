@@ -1,0 +1,150 @@
+# Terraform Provider CI/CD Workflow
+name: CI
+
+on:
+  pull_request:
+    paths-ignore:
+      - 'README.md'
+      - 'CHANGELOG.md'
+      - 'website/**'
+  push:
+    branches:
+      - master
+      - main
+    paths-ignore:
+      - 'README.md'
+      - 'CHANGELOG.md'
+      - 'website/**'
+
+permissions:
+  contents: read
+
+jobs:
+  # Step 1: Lint
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Run make lint
+        run: make lint
+
+  # Step 2: Build
+  build:
+    name: Build
+    needs: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Run make build
+        run: make build
+
+  # Step 3: Test (Unit tests must pass, acceptance tests can fail)
+  test:
+    name: Unit Tests
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Run make test
+        run: make test
+
+  # Acceptance tests with Terraform (can fail)
+  test-terraform:
+    name: Acceptance Tests (Terraform)
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.7
+          terraform_wrapper: false
+
+      - name: Run make testacc
+        env:
+          TF_ACC: "1"
+        run: make testacc
+        continue-on-error: true
+
+  # Acceptance tests with OpenTofu (can fail)
+  test-opentofu:
+    name: Acceptance Tests (OpenTofu)
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Setup OpenTofu
+        uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: 1.10.5
+          tofu_wrapper: false
+
+      - name: Run make testacc
+        env:
+          TF_ACC: "1"
+        run: make testacc
+        continue-on-error: true
+
+  # Step 4: Generate (runs make generate which does copywrite + docs)
+  generate:
+    name: Generate
+    needs: test  # Wait for unit tests to pass
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.7
+          terraform_wrapper: false
+
+      - name: Run make generate
+        run: make generate
+
+      - name: Verify no uncommitted changes
+        run: |
+          git diff --compact-summary --exit-code || \
+            (echo; echo "Unexpected difference after 'make generate'. Run 'make generate' and commit the changes."; exit 1)

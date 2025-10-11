@@ -1,7 +1,12 @@
+ARTIFACT_NAME := $(shell grep "^module " go.mod | awk '{print $$2}' | xargs basename)
+
 default: fmt lint install generate
 
 build:
 	go build -v ./...
+
+artifact:
+	go build -gcflags="all=-N -l" -o $(ARTIFACT_NAME)
 
 install: build
 	go install -v ./...

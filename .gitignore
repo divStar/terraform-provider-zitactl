@@ -1,38 +1,68 @@
+# Binaries for programs and plugins
 *.dll
 *.exe
-.DS_Store
-example.tf
-terraform.tfplan
-terraform.tfstate
+*.exe~
+*.so
+*.dylib
+terraform-provider-zitactl
+terraform-provider-*_v*
+
+# Test binaries
+*.test
+
+# Go coverage output
+*.out
+coverage.txt
+
+# Go dependencies
+vendor/
+go.work
+
+# Build outputs
 bin/
 dist/
-modules-dev/
-/pkg/
-website/.vagrant
-website/.bundle
-website/build
-website/node_modules
-.vagrant/
+pkg/
+*.snap
+
+# Terraform files
+*.tfstate
+*.tfstate.*
+*.tfvars
 *.backup
-./*.tfstate
 .terraform/
-*.log
-*.bak
+.terraform.lock.hcl
+crash.log
+crash.*.log
+terraform.tfplan
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
 *~
-.*.swp
-.idea
-*.iml
-*.test
-*.iml
 
-website/vendor
+# OS files
+.DS_Store
+Thumbs.db
 
-# Test exclusions
-!command/test-fixtures/**/*.tfstate
-!command/test-fixtures/**/.terraform/
+# Environment variables
+.env
+*.env
 
-# Keep windows files with windows line endings
-*.winfile eol=crlf
+# GPG Keys (never commit these!)
+*.key
+*.asc
+private.key
+public.key
 
-# Exclude the provider itself
-terraform-provider-zitactl
+# Temporary files
+tmp/
+temp/
+.tmp/
+*.bak
+*.log
+
+# Testing
+.test/
