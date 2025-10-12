@@ -33,6 +33,11 @@ jobs:
           go-version-file: 'go.mod'
           cache: true
 
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: latest
+
       - name: Run make lint
         run: make lint
 
@@ -53,7 +58,7 @@ jobs:
       - name: Run make build
         run: make build
 
-  # Step 3: Test (Unit tests must pass, acceptance tests can fail)
+  # Step 3: Unit tests
   test:
     name: Unit Tests
     needs: build
@@ -70,7 +75,7 @@ jobs:
       - name: Run make test
         run: make test
 
-  # Acceptance tests with Terraform (can fail)
+  # Step 3: acceptance tests with Terraform
   test-terraform:
     name: Acceptance Tests (Terraform)
     needs: build
@@ -87,7 +92,7 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.5.7
+          terraform_version: latest
           terraform_wrapper: false
 
       - name: Run make testacc
@@ -96,7 +101,7 @@ jobs:
         run: make testacc
         continue-on-error: true
 
-  # Acceptance tests with OpenTofu (can fail)
+  # Step 3: acceptance tests with OpenTofu
   test-opentofu:
     name: Acceptance Tests (OpenTofu)
     needs: build
@@ -113,7 +118,7 @@ jobs:
       - name: Setup OpenTofu
         uses: opentofu/setup-opentofu@v1
         with:
-          tofu_version: 1.10.5
+          tofu_version: latest
           tofu_wrapper: false
 
       - name: Run make testacc
@@ -122,10 +127,10 @@ jobs:
         run: make testacc
         continue-on-error: true
 
-  # Step 4: Generate (runs make generate which does copywrite + docs)
+  # Step 4: Generate license headers and docs
   generate:
     name: Generate
-    needs: test  # Wait for unit tests to pass
+    needs: [test, test-terraform, test-opentofu]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -138,7 +143,7 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.5.7
+          terraform_version: latest
           terraform_wrapper: false
 
       - name: Run make generate

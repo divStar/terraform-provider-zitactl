@@ -12,14 +12,14 @@ import (
 	"github.com/zitadel/zitadel-go/v3/pkg/client"
 )
 
-// ClientInfo contains provider configuration and factory for lazy client creation
+// ClientInfo contains provider configuration and factory for lazy client creation.
 type ClientInfo struct {
 	Config        *ZitactlProviderModel
 	ClientFactory ClientFactory
 	Client        *client.Client // if a Client is already created, it will be returned
 }
 
-// GetClient creates or returns the Zitadel client, only when all config values are known
+// GetClient creates or returns the Zitadel client, only when all config values are known.
 func (ci *ClientInfo) GetClient(ctx context.Context) (*client.Client, error) {
 	// Check for missing config
 	if ci.Config == nil {

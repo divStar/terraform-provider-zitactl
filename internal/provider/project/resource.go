@@ -16,7 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/zitadel/zitadel-go/v3/pkg/client/zitadel/admin"
+	orgApi "github.com/zitadel/zitadel-go/v3/pkg/client/zitadel/org/v2"
 	projectApi "github.com/zitadel/zitadel-go/v3/pkg/client/zitadel/project/v2beta"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -131,50 +131,26 @@ func (r *ProjectResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 
 	// Lazy client initialization
-	zitadelClient, errClientCreation := r.clientInfo.GetClient(ctx)
-	if errClientCreation != nil {
-		resp.Diagnostics.AddError("Client configuration not possible!", errClientCreation.Error())
+	zitadelClient, err := r.clientInfo.GetClient(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("Client configuration not possible!", err.Error())
 		return
 	}
 
 	orgId := data.OrgId.ValueString()
-
-	_, err := zitadelClient.AdminService().GetOrgByID(ctx, &admin.GetOrgByIDRequest{
-		Id: orgId,
-	})
-	if err != nil {
-		if st, ok := status.FromError(err); ok && st.Code() == codes.NotFound {
-			resp.Diagnostics.AddError(
-				"Invalid Organization ID",
-				fmt.Sprintf("Organization with ID %s does not exist. Please provide a valid organization ID.", orgId),
-			)
-		} else {
-			resp.Diagnostics.AddError(
-				"Error Validating Organization",
-				fmt.Sprintf("Could not validate organization %s: %s", orgId, err.Error()),
-			)
-		}
-		return
-	}
 
 	// Validate that the organization exists before creating the project
 	tflog.Debug(ctx, "validating organization exists", map[string]any{
 		"org_id": orgId,
 	})
 
-	createReq := &projectApi.CreateProjectRequest{
-		Name:                  data.Name.ValueString(),
-		OrganizationId:        data.OrgId.ValueString(),
-		ProjectRoleAssertion:  data.ProjectRoleAssertion.ValueBool(),
-		AuthorizationRequired: data.ProjectRoleCheck.ValueBool(),
-		ProjectAccessRequired: data.HasProjectCheck.ValueBool(),
-	}
-
-	if !data.PrivateLabelingSetting.IsNull() {
-		settingStr := data.PrivateLabelingSetting.ValueString()
-		if settingValue, ok := projectApi.PrivateLabelingSetting_value[settingStr]; ok {
-			createReq.PrivateLabelingSetting = projectApi.PrivateLabelingSetting(settingValue)
-		}
+	organization, err := zitadelClient.OrganizationServiceV2().ListOrganizations(ctx, r.createOrganizationValidationRequest(orgId))
+	if err != nil || organization.Details.TotalResult == 0 {
+		resp.Diagnostics.AddError(
+			"Failed to validate organization",
+			fmt.Sprintf("Unable to retrieve organization with `org_id` = '%s': %s", orgId, err),
+		)
+		return
 	}
 
 	tflog.Debug(ctx, "creating project", map[string]any{
@@ -182,7 +158,7 @@ func (r *ProjectResource) Create(ctx context.Context, req resource.CreateRequest
 		"org_id": data.OrgId.ValueString(),
 	})
 
-	createResp, err := zitadelClient.ProjectServiceV2Beta().CreateProject(ctx, createReq)
+	createResp, err := zitadelClient.ProjectServiceV2Beta().CreateProject(ctx, r.createProjectCreationRequest(data))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating project",
@@ -359,6 +335,8 @@ func (r *ProjectResource) Delete(ctx context.Context, req resource.DeleteRequest
 			tflog.Warn(ctx, "project already deleted or does not exist", map[string]any{
 				"project_id": projectId,
 			})
+			// Resource is already gone, remove from state
+			resp.State.RemoveResource(ctx)
 			return
 		}
 
@@ -378,4 +356,37 @@ func (r *ProjectResource) Delete(ctx context.Context, req resource.DeleteRequest
 // Use the format `id`. The project with the given `id` must already exist.
 func (r *ProjectResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+}
+
+// CreateValidationRequest creates a validation request, that checks if the organization with the given `org_id` exists.
+func (r *ProjectResource) createOrganizationValidationRequest(orgId string) *orgApi.ListOrganizationsRequest {
+	return &orgApi.ListOrganizationsRequest{
+		Queries: []*orgApi.SearchQuery{
+			{
+				Query: &orgApi.SearchQuery_IdQuery{
+					IdQuery: &orgApi.OrganizationIDQuery{
+						Id: orgId,
+					},
+				},
+			},
+		},
+	}
+}
+
+func (r *ProjectResource) createProjectCreationRequest(data ProjectResourceModel) *projectApi.CreateProjectRequest {
+	createReq := &projectApi.CreateProjectRequest{
+		Name:                  data.Name.ValueString(),
+		OrganizationId:        data.OrgId.ValueString(),
+		ProjectRoleAssertion:  data.ProjectRoleAssertion.ValueBool(),
+		AuthorizationRequired: data.ProjectRoleCheck.ValueBool(),
+		ProjectAccessRequired: data.HasProjectCheck.ValueBool(),
+	}
+
+	if !data.PrivateLabelingSetting.IsNull() {
+		settingStr := data.PrivateLabelingSetting.ValueString()
+		if settingValue, ok := projectApi.PrivateLabelingSetting_value[settingStr]; ok {
+			createReq.PrivateLabelingSetting = projectApi.PrivateLabelingSetting(settingValue)
+		}
+	}
+	return createReq
 }

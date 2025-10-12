@@ -8,9 +8,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
-	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
-	"github.com/hashicorp/terraform-plugin-go/tftypes"
 )
 
 // TestAccProtoV6ProviderFactories are used to instantiate a provider during
@@ -32,28 +30,4 @@ func TestAccPreCheck(t *testing.T) {
 	if v := os.Getenv("ZITACTL_SERVICE_ACCOUNT_KEY"); v == "" {
 		t.Skip("ZITACTL_SERVICE_ACCOUNT_KEY must be set for acceptance tests")
 	}
-}
-
-// convertTypesStringToTFType converts a types.String to tftypes.Value
-// for use in test configurations.
-func convertTypesStringToTFType(s types.String) tftypes.Value {
-	if s.IsNull() {
-		return tftypes.NewValue(tftypes.String, nil)
-	}
-	if s.IsUnknown() {
-		return tftypes.NewValue(tftypes.String, tftypes.UnknownValue)
-	}
-	return tftypes.NewValue(tftypes.String, s.ValueString())
-}
-
-// convertTypesBoolToTFType converts a types.Bool to tftypes.Value
-// for use in test configurations.
-func convertTypesBoolToTFType(b types.Bool) tftypes.Value {
-	if b.IsNull() {
-		return tftypes.NewValue(tftypes.Bool, nil)
-	}
-	if b.IsUnknown() {
-		return tftypes.NewValue(tftypes.Bool, tftypes.UnknownValue)
-	}
-	return tftypes.NewValue(tftypes.Bool, b.ValueBool())
 }

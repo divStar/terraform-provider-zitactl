@@ -46,7 +46,7 @@ func ConvertStringSliceToList(strings []string) types.List {
 	return list
 }
 
-// ConvertEnumSliceToList converts a slice of protobuf enums to types.List of strings
+// ConvertEnumSliceToList converts a slice of protobuf enums to types.List of strings.
 func ConvertEnumSliceToList[T interface{ String() string }](enums []T) types.List {
 	if len(enums) == 0 {
 		return types.ListNull(types.StringType)

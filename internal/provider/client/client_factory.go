@@ -26,11 +26,14 @@ func DefaultClientFactory(ctx context.Context, domain string, skipTlsVerificatio
 	if skipTlsVerification {
 		zitadelOpts = append(zitadelOpts, zitadel.WithInsecureSkipVerifyTLS())
 		// Workaround for https://github.com/zitadel/zitadel-go/issues/405: set default http client to also ignore TLS
-		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+		if transport, ok := http.DefaultTransport.(*http.Transport); ok {
+			transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+		}
 	}
 
 	// Validate and parse JSON into a KeyFile struct
-	var keyJson oidcClient.KeyFile
+	// TODO: KeyFile is deprecated, waiting on https://github.com/zitadel/oidc/issues/806
+	var keyJson oidcClient.KeyFile //nolint:staticcheck
 	if err := json.Unmarshal([]byte(serviceAccountKeyJSON), &keyJson); err != nil {
 		return nil, fmt.Errorf("invalid service account key JSON: %w", err)
 	}

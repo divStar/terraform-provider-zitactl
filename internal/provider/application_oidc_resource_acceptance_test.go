@@ -6,6 +6,7 @@ package provider
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -135,7 +136,7 @@ func TestAccApplicationOIDCResource_ProjectIdChangeRequiresReplace(t *testing.T)
 	})
 }
 
-// TestAccApplicationOIDCResource_Import tests the import functionality
+// TestAccApplicationOIDCResource_Import tests the import functionality.
 func TestAccApplicationOIDCResource_Import(t *testing.T) {
 	if os.Getenv("TF_ACC") != "1" {
 		t.Skip("Acceptance test - set TF_ACC=1 to run")
@@ -300,4 +301,214 @@ resource "zitactl_application_oidc" "test" {
   auth_method_type = "OIDC_AUTH_METHOD_TYPE_BASIC"
 }
 `, orgName, appName)
+}
+
+// TestAccApplicationOIDCResource_InvalidProjectId tests that creating an OIDC app with invalid project_id fails.
+func TestAccApplicationOIDCResource_InvalidProjectId(t *testing.T) {
+	if os.Getenv("TF_ACC") != "1" {
+		t.Skip("Acceptance test - set TF_ACC=1 to run")
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { TestAccPreCheck(t) },
+		ProtoV6ProviderFactories: TestAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccApplicationOIDCResourceConfigWithInvalidProjectId("test-oidc-invalid-project", "invalid-project-id-123456"),
+				ExpectError: regexp.MustCompile(`Error creating OIDC application|rpc error|invalid|not found`),
+			},
+		},
+	})
+}
+
+// TestAccApplicationOIDCResource_MissingRequiredFields tests that required fields are validated.
+func TestAccApplicationOIDCResource_MissingRequiredFields(t *testing.T) {
+	if os.Getenv("TF_ACC") != "1" {
+		t.Skip("Acceptance test - set TF_ACC=1 to run")
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { TestAccPreCheck(t) },
+		ProtoV6ProviderFactories: TestAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Missing redirect_uris
+			{
+				Config:      testAccApplicationOIDCResourceConfigMissingRedirectUris("test-oidc-missing-redirect"),
+				ExpectError: regexp.MustCompile(`Missing required argument|The argument "redirect_uris" is required`),
+			},
+			// Missing grant_types
+			{
+				Config:      testAccApplicationOIDCResourceConfigMissingGrantTypes("test-oidc-missing-grant"),
+				ExpectError: regexp.MustCompile(`Missing required argument|The argument "grant_types" is required`),
+			},
+		},
+	})
+}
+
+// testAccApplicationOIDCResourceConfigWithInvalidProjectId returns configuration with an invalid project_id.
+func testAccApplicationOIDCResourceConfigWithInvalidProjectId(appName, projectId string) string {
+	return fmt.Sprintf(`
+resource "zitactl_application_oidc" "test" {
+  name       = %[1]q
+  project_id = %[2]q
+
+  redirect_uris = ["https://example.com/callback"]
+
+  grant_types = [
+    "OIDC_GRANT_TYPE_AUTHORIZATION_CODE",
+    "OIDC_GRANT_TYPE_REFRESH_TOKEN"
+  ]
+
+  response_types = [
+    "OIDC_RESPONSE_TYPE_CODE"
+  ]
+
+  app_type         = "OIDC_APP_TYPE_WEB"
+  auth_method_type = "OIDC_AUTH_METHOD_TYPE_BASIC"
+}
+`, appName, projectId)
+}
+
+// testAccApplicationOIDCResourceConfigMissingRedirectUris returns configuration without redirect_uris.
+func testAccApplicationOIDCResourceConfigMissingRedirectUris(appName string) string {
+	return fmt.Sprintf(`
+data "zitactl_orgs" "test" {
+  name = "Sanctum"
+}
+
+resource "zitactl_project" "test" {
+  name   = "test-project"
+  org_id = data.zitactl_orgs.test.ids[0]
+}
+
+resource "zitactl_application_oidc" "test" {
+  name       = %[1]q
+  project_id = zitactl_project.test.id
+
+  grant_types = [
+    "OIDC_GRANT_TYPE_AUTHORIZATION_CODE"
+  ]
+
+  response_types = [
+    "OIDC_RESPONSE_TYPE_CODE"
+  ]
+
+  app_type         = "OIDC_APP_TYPE_WEB"
+  auth_method_type = "OIDC_AUTH_METHOD_TYPE_BASIC"
+}
+`, appName)
+}
+
+// testAccApplicationOIDCResourceConfigMissingGrantTypes returns configuration without grant_types.
+func testAccApplicationOIDCResourceConfigMissingGrantTypes(appName string) string {
+	return fmt.Sprintf(`
+data "zitactl_orgs" "test" {
+  name = "Sanctum"
+}
+
+resource "zitactl_project" "test" {
+  name   = "test-project"
+  org_id = data.zitactl_orgs.test.ids[0]
+}
+
+resource "zitactl_application_oidc" "test" {
+  name       = %[1]q
+  project_id = zitactl_project.test.id
+
+  redirect_uris = ["https://example.com/callback"]
+
+  response_types = [
+    "OIDC_RESPONSE_TYPE_CODE"
+  ]
+
+  app_type         = "OIDC_APP_TYPE_WEB"
+  auth_method_type = "OIDC_AUTH_METHOD_TYPE_BASIC"
+}
+`, appName)
+}
+
+// TestAccApplicationOIDCResource_InvalidProviderConfig tests that invalid provider configuration is caught during Create.
+// This tests the lazy client initialization error path in the Create method.
+func TestAccApplicationOIDCResource_InvalidProviderConfig(t *testing.T) {
+	if os.Getenv("TF_ACC") != "1" {
+		t.Skip("Acceptance test - set TF_ACC=1 to run")
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: TestAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccApplicationOIDCResourceConfigWithInvalidProvider("test-app-bad-config"),
+				ExpectError: regexp.MustCompile(`Client configuration not possible|failed to create Zitadel client|invalid service account key|parse|decode`),
+			},
+		},
+	})
+}
+
+// TestAccApplicationOIDCResource_InvalidProviderConfigRead tests that invalid provider configuration is caught during a refresh (Read).
+// Creates a resource with valid config, then attempts to refresh it with invalid provider config.
+// This tests the lazy client initialization error path in the Read method.
+func TestAccApplicationOIDCResource_InvalidProviderConfigRead(t *testing.T) {
+	if os.Getenv("TF_ACC") != "1" {
+		t.Skip("Acceptance test - set TF_ACC=1 to run")
+	}
+
+	orgName := os.Getenv("ZITACTL_TEST_ORG_NAME")
+	if orgName == "" {
+		orgName = "Sanctum"
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { TestAccPreCheck(t) },
+		ProtoV6ProviderFactories: TestAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Step 1: Create application with valid provider config
+			{
+				Config: testAccApplicationOIDCResourceConfig(orgName, "test-app-read-invalid", false, []string{"https://example.com/callback"}),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("zitactl_application_oidc.test", "name", "test-app-read-invalid"),
+					resource.TestCheckResourceAttrSet("zitactl_application_oidc.test", "id"),
+				),
+			},
+			// Step 2: Try to refresh/read with invalid provider config
+			{
+				Config:      testAccApplicationOIDCResourceConfigWithInvalidProvider("test-app-read-invalid"),
+				ExpectError: regexp.MustCompile(`Client configuration not possible|failed to create Zitadel client|invalid service account key|parse|decode|PEM decode failed`),
+			},
+			// Step 3: Restore valid config for cleanup
+			{
+				Config: testAccApplicationOIDCResourceConfig(orgName, "test-app-read-invalid", false, []string{"https://example.com/callback"}),
+			},
+		},
+	})
+}
+
+// testAccApplicationOIDCResourceConfigWithInvalidProvider returns configuration with invalid provider credentials.
+// Uses a non-existent domain and invalid service account key to trigger client initialization errors.
+func testAccApplicationOIDCResourceConfigWithInvalidProvider(appName string) string {
+	return fmt.Sprintf(`
+provider "zitactl" {
+  domain              = "nonexistent-test-domain.zitadel.invalid"
+  service_account_key = "{\"type\":\"serviceaccount\",\"keyId\":\"invalid\",\"key\":\"-----BEGIN RSA PRIVATE KEY-----\\nInvalidKey\\n-----END RSA PRIVATE KEY-----\",\"userId\":\"invalid\"}"
+}
+
+resource "zitactl_application_oidc" "test" {
+  name       = %[1]q
+  project_id = "dummy-project-id"
+
+  redirect_uris = ["https://example.com/callback"]
+
+  grant_types = [
+    "OIDC_GRANT_TYPE_AUTHORIZATION_CODE",
+    "OIDC_GRANT_TYPE_REFRESH_TOKEN"
+  ]
+
+  response_types = [
+    "OIDC_RESPONSE_TYPE_CODE"
+  ]
+
+  app_type         = "OIDC_APP_TYPE_WEB"
+  auth_method_type = "OIDC_AUTH_METHOD_TYPE_BASIC"
+}
+`, appName)
 }

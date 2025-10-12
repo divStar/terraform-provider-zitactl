@@ -99,6 +99,13 @@ func (d *OrgsDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	}
 
 	orgName := data.Name.ValueString()
+	if orgName == "" {
+		resp.Diagnostics.AddError(
+			"Invalid name",
+			"Organization name cannot be empty (must be 1-200 characters)",
+		)
+		return
+	}
 
 	queryMethod := objectV2.TextQueryMethod_TEXT_QUERY_METHOD_EQUALS_IGNORE_CASE
 	if !data.NameMethod.IsNull() && !data.NameMethod.IsUnknown() {

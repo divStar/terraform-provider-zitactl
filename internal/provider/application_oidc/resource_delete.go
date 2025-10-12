@@ -46,6 +46,8 @@ func (r *ApplicationOIDCResource) Delete(ctx context.Context, req resource.Delet
 			tflog.Warn(ctx, "OIDC application already deleted or does not exist", map[string]any{
 				"app_id": appId,
 			})
+			// Resource is already gone, remove from state
+			resp.State.RemoveResource(ctx)
 			return
 		}
 

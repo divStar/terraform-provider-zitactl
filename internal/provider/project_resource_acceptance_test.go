@@ -149,13 +149,13 @@ func TestAccProjectResource_OrgIdChangeRequiresReplace(t *testing.T) {
 			// Attempt to change org_id (should force replacement and fail on invalid org)
 			{
 				Config:      testAccProjectResourceConfigWithInvalidOrgId("test-project-org-change", "different-org-id"),
-				ExpectError: regexp.MustCompile(`Invalid Organization ID|does not exist`),
+				ExpectError: regexp.MustCompile(`Unable to retrieve organization with|org_id|different-org-id`),
 			},
 		},
 	})
 }
 
-// TestAccProjectResource_Import tests the import functionality
+// TestAccProjectResource_Import tests the import functionality.
 func TestAccProjectResource_Import(t *testing.T) {
 	if os.Getenv("TF_ACC") != "1" {
 		t.Skip("Acceptance test - set TF_ACC=1 to run")
@@ -225,6 +225,145 @@ func testAccProjectResourceConfigWithoutOrgId(projectName string) string {
 	return fmt.Sprintf(`
 resource "zitactl_project" "test" {
   name                   = %[1]q
+  project_role_assertion = false
+  project_role_check     = false
+  has_project_check      = false
+}
+`, projectName)
+}
+
+// TestAccProjectResource_InvalidPrivateLabelingSetting tests that invalid private_labeling_setting is caught.
+func TestAccProjectResource_InvalidPrivateLabelingSetting(t *testing.T) {
+	if os.Getenv("TF_ACC") != "1" {
+		t.Skip("Acceptance test - set TF_ACC=1 to run")
+	}
+
+	orgName := os.Getenv("ZITACTL_TEST_ORG_NAME")
+	if orgName == "" {
+		orgName = "Sanctum"
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { TestAccPreCheck(t) },
+		ProtoV6ProviderFactories: TestAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccProjectResourceConfigInvalidPrivateLabelingSetting(orgName, "test-project-invalid-setting"),
+				ExpectError: regexp.MustCompile(`Invalid Attribute Value|private_labeling_setting`),
+			},
+		},
+	})
+}
+
+// TestAccProjectResource_EmptyName tests that empty project name is rejected.
+func TestAccProjectResource_EmptyName(t *testing.T) {
+	if os.Getenv("TF_ACC") != "1" {
+		t.Skip("Acceptance test - set TF_ACC=1 to run")
+	}
+
+	orgName := os.Getenv("ZITACTL_TEST_ORG_NAME")
+	if orgName == "" {
+		orgName = "Sanctum"
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { TestAccPreCheck(t) },
+		ProtoV6ProviderFactories: TestAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccProjectResourceConfig(orgName, "", false, false, false, "PRIVATE_LABELING_SETTING_UNSPECIFIED"),
+				ExpectError: regexp.MustCompile(`Error creating project|rpc error|invalid|empty`),
+			},
+		},
+	})
+}
+
+// testAccProjectResourceConfigInvalidPrivateLabelingSetting returns configuration with an invalid private_labeling_setting.
+func testAccProjectResourceConfigInvalidPrivateLabelingSetting(orgName, projectName string) string {
+	return fmt.Sprintf(`
+data "zitactl_orgs" "test" {
+  name = %[1]q
+}
+
+resource "zitactl_project" "test" {
+  name                     = %[2]q
+  org_id                   = data.zitactl_orgs.test.ids[0]
+  project_role_assertion   = false
+  project_role_check       = false
+  has_project_check        = false
+  private_labeling_setting = "INVALID_SETTING_VALUE"
+}
+`, orgName, projectName)
+}
+
+// TestAccProjectResource_InvalidProviderConfig tests that invalid provider configuration is caught during Create.
+// This tests the lazy client initialization error path in the Create method.
+func TestAccProjectResource_InvalidProviderConfig(t *testing.T) {
+	if os.Getenv("TF_ACC") != "1" {
+		t.Skip("Acceptance test - set TF_ACC=1 to run")
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: TestAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccProjectResourceConfigWithInvalidProvider("test-project-bad-config"),
+				ExpectError: regexp.MustCompile(`Client configuration not possible|failed to create Zitadel client|invalid service account key|parse|decode`),
+			},
+		},
+	})
+}
+
+// TestAccProjectResource_InvalidProviderConfigRead tests that invalid provider configuration is caught during a refresh (Read).
+// Creates a resource with valid config, then attempts to refresh it with invalid provider config.
+// This tests the lazy client initialization error path in the Read method.
+func TestAccProjectResource_InvalidProviderConfigRead(t *testing.T) {
+	if os.Getenv("TF_ACC") != "1" {
+		t.Skip("Acceptance test - set TF_ACC=1 to run")
+	}
+
+	orgName := os.Getenv("ZITACTL_TEST_ORG_NAME")
+	if orgName == "" {
+		orgName = "Sanctum"
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { TestAccPreCheck(t) },
+		ProtoV6ProviderFactories: TestAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Step 1: Create project with valid provider config
+			{
+				Config: testAccProjectResourceConfig(orgName, "test-project-read-invalid", false, false, false, "PRIVATE_LABELING_SETTING_UNSPECIFIED"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("zitactl_project.test", "name", "test-project-read-invalid"),
+					resource.TestCheckResourceAttrSet("zitactl_project.test", "id"),
+				),
+			},
+			// Step 2: Try to refresh/read with invalid provider config
+			{
+				Config:      testAccProjectResourceConfigWithInvalidProvider("test-project-read-invalid"),
+				ExpectError: regexp.MustCompile(`Client configuration not possible|failed to create Zitadel client|invalid service account key|parse|decode|PEM decode failed`),
+			},
+			// Step 3: Restore valid config for cleanup
+			{
+				Config: testAccProjectResourceConfig(orgName, "test-project-read-invalid", false, false, false, "PRIVATE_LABELING_SETTING_UNSPECIFIED"),
+			},
+		},
+	})
+}
+
+// testAccProjectResourceConfigWithInvalidProvider returns configuration with invalid provider credentials.
+// Uses a non-existent domain and invalid service account key to trigger client initialization errors.
+func testAccProjectResourceConfigWithInvalidProvider(projectName string) string {
+	return fmt.Sprintf(`
+provider "zitactl" {
+  domain              = "nonexistent-test-domain.zitadel.invalid"
+  service_account_key = "{\"type\":\"serviceaccount\",\"keyId\":\"invalid\",\"key\":\"-----BEGIN RSA PRIVATE KEY-----\\nInvalidKey\\n-----END RSA PRIVATE KEY-----\",\"userId\":\"invalid\"}"
+}
+
+resource "zitactl_project" "test" {
+  name                   = %[1]q
+  org_id                 = "dummy-org-id"
   project_role_assertion = false
   project_role_check     = false
   has_project_check      = false
