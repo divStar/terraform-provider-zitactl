@@ -46,10 +46,8 @@ services:
 
       # TLS configuration
       ZITADEL_TLS_ENABLED: true
-      ZITADEL_TLS_KEY: ${ZITADEL_TLS_KEY_B64}
-      ZITADEL_TLS_CERT: ${ZITADEL_TLS_CERT_B64}
-      #ZITADEL_TLS_KEYPATH: /certs/tls.key
-      #ZITADEL_TLS_CERTPATH: /certs/tls.crt
+      ZITADEL_TLS_KEYPATH: /certs/tls.key
+      ZITADEL_TLS_CERTPATH: /certs/tls.crt
 
       # First instance configuration - Organization "Sanctum"
       ZITADEL_FIRSTINSTANCE_ORG_NAME: Sanctum
