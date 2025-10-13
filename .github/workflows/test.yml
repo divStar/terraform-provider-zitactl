@@ -118,7 +118,7 @@ jobs:
         run: make zitadel-up
 
       - name: Show Zitadel logs on failure
-        if: failure()
+        if: always()
         run: |
           docker ps
           echo "=== Zitadel logs ==="
