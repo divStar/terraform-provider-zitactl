@@ -106,8 +106,25 @@ jobs:
           tofu_version: latest
           tofu_wrapper: false
 
+      - name: Debug before docker-compose
+        run: |
+          echo "Current directory: " $PWD
+          echo "Certs directory contents:"
+          ls -la $PWD/**/*
+          echo "Absolute path to certs:"
+          realpath $PWD
+
       - name: Start Zitadel
         run: make zitadel-up
+
+      - name: Show Zitadel logs on failure
+        if: failure()
+        run: |
+          docker ps
+          echo "=== Zitadel logs ==="
+          docker compose logs zitadel
+          echo "=== DB logs ==="
+          docker compose logs db
 
       - name: Run make testacc
         env:
