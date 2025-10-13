@@ -114,6 +114,11 @@ jobs:
           echo "Absolute path to certs:"
           realpath $PWD
 
+      - name: Prepare Zitadel serviceaccount directory
+        run: |
+          mkdir -p ${PWD}/tools/serviceaccount
+          chmod 777 ${PWD}/tools/serviceaccount
+
       - name: Start Zitadel
         run: make zitadel-up
 
