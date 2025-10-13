@@ -435,6 +435,7 @@ func TestAccApplicationOIDCResource_InvalidProviderConfig(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { TestAccPreCheck(t) },
 		ProtoV6ProviderFactories: TestAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{

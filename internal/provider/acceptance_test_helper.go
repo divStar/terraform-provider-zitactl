@@ -25,9 +25,9 @@ var TestAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServe
 func TestAccPreCheck(t *testing.T) {
 	// Check for required environment variables for acceptance tests
 	if v := os.Getenv("ZITACTL_DOMAIN"); v == "" {
-		t.Skip("ZITACTL_DOMAIN must be set for acceptance tests")
+		t.Fatal("ZITACTL_DOMAIN must be set for acceptance tests")
 	}
 	if v := os.Getenv("ZITACTL_SERVICE_ACCOUNT_KEY"); v == "" {
-		t.Skip("ZITACTL_SERVICE_ACCOUNT_KEY must be set for acceptance tests")
+		t.Fatal("ZITACTL_SERVICE_ACCOUNT_KEY must be set for acceptance tests")
 	}
 }

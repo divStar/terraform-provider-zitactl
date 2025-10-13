@@ -75,12 +75,15 @@ jobs:
       - name: Run make test
         run: make test
 
-  # Step 3: acceptance tests with Terraform
-  test-terraform:
-    name: Acceptance Tests (Terraform)
+  # Step 3: acceptance tests for Terraform and OpenTofu (using '../tools/docker-compose.yml')
+  test-acceptance:
+    name: Acceptance Tests (${{ matrix.tool }})
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    strategy:
+      matrix:
+        tool: [ terraform, opentofu ]
     steps:
       - uses: actions/checkout@v4
 
@@ -90,47 +93,36 @@ jobs:
           cache: true
 
       - name: Setup Terraform
+        if: matrix.tool == 'terraform'
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: latest
           terraform_wrapper: false
 
-      - name: Run make testacc
-        env:
-          TF_ACC: "1"
-        run: make testacc
-        continue-on-error: true
-
-  # Step 3: acceptance tests with OpenTofu
-  test-opentofu:
-    name: Acceptance Tests (OpenTofu)
-    needs: build
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: 'go.mod'
-          cache: true
-
       - name: Setup OpenTofu
+        if: matrix.tool == 'opentofu'
         uses: opentofu/setup-opentofu@v1
         with:
           tofu_version: latest
           tofu_wrapper: false
 
+      - name: Start Zitadel
+        run: make zitadel-up
+
       - name: Run make testacc
         env:
           TF_ACC: "1"
         run: make testacc
         continue-on-error: true
 
+      - name: Stop Zitadel
+        if: always()
+        run: make zitadel-down
+
   # Step 4: Generate license headers and docs
   generate:
     name: Generate
-    needs: [test, test-terraform, test-opentofu]
+    needs: [ test, test-acceptance ]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

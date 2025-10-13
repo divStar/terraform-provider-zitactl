@@ -195,12 +195,7 @@ func TestAccOrgsDataSource_InvalidProviderConfig(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			// Skip standard PreCheck - we want to test with invalid credentials
-			if os.Getenv("ZITACTL_DOMAIN") == "" {
-				t.Skip("ZITACTL_DOMAIN must be set for acceptance tests")
-			}
-		},
+		PreCheck:                 func() { TestAccPreCheck(t) },
 		ProtoV6ProviderFactories: TestAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{

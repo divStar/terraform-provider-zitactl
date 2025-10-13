@@ -1,0 +1,88 @@
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: db
+    restart: always
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - zitadel
+
+  zitadel:
+    image: ghcr.io/zitadel/zitadel:latest
+    container_name: zitadel
+    restart: always
+    ports:
+      - "443:8443"
+    command: 'start-from-init --masterkey "MasterkeyNeedsToHave32Characters" --tlsMode enabled'
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Database configuration
+      ZITADEL_DATABASE_POSTGRES_HOST: db
+      ZITADEL_DATABASE_POSTGRES_PORT: 5432
+      ZITADEL_DATABASE_POSTGRES_DATABASE: zitadel
+      ZITADEL_DATABASE_POSTGRES_USER_USERNAME: zitadel
+      ZITADEL_DATABASE_POSTGRES_USER_PASSWORD: zitadel
+      ZITADEL_DATABASE_POSTGRES_USER_SSL_MODE: disable
+      ZITADEL_DATABASE_POSTGRES_ADMIN_USERNAME: postgres
+      ZITADEL_DATABASE_POSTGRES_ADMIN_PASSWORD: postgres
+      ZITADEL_DATABASE_POSTGRES_ADMIN_SSL_MODE: disable
+
+      # External access configuration
+      ZITADEL_EXTERNALDOMAIN: localhost
+      ZITADEL_EXTERNALPORT: 443
+      ZITADEL_PORT: 8443
+
+      # TLS configuration
+      ZITADEL_TLS_ENABLED: true
+      ZITADEL_TLS_KEY: ${ZITADEL_TLS_KEY_B64}
+      ZITADEL_TLS_CERT: ${ZITADEL_TLS_CERT_B64}
+      #ZITADEL_TLS_KEYPATH: /certs/tls.key
+      #ZITADEL_TLS_CERTPATH: /certs/tls.crt
+
+      # First instance configuration - Organization "Sanctum"
+      ZITADEL_FIRSTINSTANCE_ORG_NAME: Sanctum
+      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_USERNAME: admin
+      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD: Password1!
+      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORDCHANGEREQUIRED: false
+
+      # Service account for testing
+      ZITADEL_FIRSTINSTANCE_MACHINEKEYPATH: /serviceaccount/zitadel-admin-sa.json
+      ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINE_USERNAME: test-service-account
+      ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINE_NAME: Test Service Account
+      ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINEKEY_TYPE: 1
+      ZITADEL_FIRSTINSTANCE_ORG_MACHINE_PAT_EXPIRATIONDATE: "2099-01-01T00:00:00Z"
+
+      # Activate the login v2 on an installation from scratch.
+      # To activate the login v2 on an existing installation, read the "What's next" section.
+      ZITADEL_DEFAULTINSTANCE_FEATURES_LOGINV2_REQUIRED: true # To use the login v1, set this to false.
+      ZITADEL_DEFAULTINSTANCE_FEATURES_LOGINV2_BASEURI: http://localhost:3000/ui/v2/login
+      # Configure the redirection paths to the login v2.
+      ZITADEL_OIDC_DEFAULTLOGINURLV2: http://localhost:3000/ui/v2/login/login?authRequest=
+      ZITADEL_OIDC_DEFAULTLOGOUTURLV2: http://localhost:3000/ui/v2/login/logout?post_logout_redirect=
+      ZITADEL_SAML_DEFAULTLOGINURLV2: http://localhost:3000/ui/v2/login/login?samlRequest=
+    volumes:
+      - ./certs:/certs:ro
+      - ./serviceaccount:/serviceaccount:rw
+    healthcheck:
+      test: ["CMD", "/app/zitadel", "ready"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - zitadel
+
+networks:
+  zitadel:
