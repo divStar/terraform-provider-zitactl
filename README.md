@@ -1,4 +1,8 @@
-# `zitactl` Terraform Provider for Zitadel v4
+![GitHub License](https://img.shields.io/github/license/divStar/terraform-provider-zitactl?style=flat&color=pink)
+![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/divStar/terraform-provider-zitactl/total?style=flat&color=peachpuff)
+![Tests passed](https://github.com/divStar/terraform-provider-zitactl/actions/workflows/test.yml/badge.svg)
+
+# `terraform-provider-zitactl` Terraform Provider for Zitadel v4
 
 ## Thanks
 
@@ -23,36 +27,36 @@ The main reason for this recommendation is the unbelievable amount of data sourc
 offers - especially in contrast to this one.
 
 Apart from the deferred client configuration (**not** provider configuration) and the fact, that the `terraform-plugin-framework`
-is used (it is the recommended way to write new Terraform providers), this provider providers only the following
+is used (it is the recommended way to write new Terraform providers), this provider offers only the following
 data sources and resources:
-- Organization list ([`zitactl_org`](./docs/data-sources/orgs.md)) data source,
-- Project ([`zitactl_project`](./docs/resources/project.md)) resource,
-- Application OIDC ([`zitactl_application_oidc`](./docs/resources/application_oidc.md)) resource
+- ![data-source](https://img.shields.io/badge/data_source-blue?style=flat) Organization list ([`zitactl_org`](./docs/data-sources/orgs.md)),
+- ![resource](https://img.shields.io/badge/resource-purple?style=flat) Project ([`zitactl_project`](./docs/resources/project.md)),
+- ![resource](https://img.shields.io/badge/resource-purple?style=flat) Application OIDC ([`zitactl_application_oidc`](./docs/resources/application_oidc.md))
 
 This makes it possible to install Zitadel in one module and configure one or several applications (e.g. pgAdmin v4)
 with OIDC/OAuth2 authentication in one go.
 
 > [!CAUTION]
-> This provider is currently at a very early stage. It gets the job done **on my MacOS machine**, but I might not have
-> forseen all edge cases. Use at your own risk.
+> This provider is currently at an early stage. I have used it **on my MacBook** and the acceptance tests work in CI, but I might *not* have forseen all edge cases.
+> **Use at your own risk!**
 
 > [!WARNING]
 > If you e.g. install Zitadel in one module and configure OIDC/OAuth2 authentication in another module, you might run into
-> a situation where Zitadel is not yet protected by a valid SSL certificate (e.g. Traefik v3 usually issues its default
-> self-signed certificate until it is able to acquire a valid certificate from a CA, but it'd be considered invalid).
+> a situation where Zitadel **is not yet protected by a valid SSL certificate** (e.g. Traefik v3 usually issues its default
+> self-signed certificate until it is able to acquire a valid certificate from a CA using ACME;
+> this intermediate certificate is usually invalid).
 > 
 > To avoid errors like:
 > ```
 > Error: Error creating project: rpc error: code = Unavailable desc = connection error: desc = "transport: authentication handshake failed: x509: certificate signed by unknown authority"
 > ```
-> you either need to implement a way to wait until a proper certificate has been issued
-> or set `skip_tls_verification` to `true` in the provider configuration.
+> you either need to implement a way to wait until a proper certificate has been issued or set `skip_tls_verification` to `true` in the provider configuration.
 > This might be a security risk though, but works for my homelab setting just fine.
 
 ## Requirements
 
-- [Terraform](https://developer.hashicorp.com/terraform/downloads) >= 1.0
-- [Go](https://golang.org/doc/install) >= 1.24
+- ![Terraform v1.5.7](https://img.shields.io/badge/Terraform-1.5.7-orange?logo=terraform) or ![OpenTofu 1.10.5](https://img.shields.io/badge/Terraform-1.10.5-peachpuff?logo=opentofu)
+- ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/divStar/terraform-provider-zitactl?style=flat&logo=go)
 
 ## Building The Provider
 
@@ -167,17 +171,18 @@ make testacc
 
 ## Tested configuration
 
-I have tested this Terraform provider with the following configuration:
-- OpenTofu v1.10.5 / Terraform 1.5.7
-- **Zitadel v4.0.0** (Helm Chart v9.5.0)
-- Kubernetes v1.34.0
-- Traefik v3.5.0 (Helm Chart v37.0.0)
-- pgAdmin 4 v9.7 (Helm Chart v1.49.0)
+I have tested this Terraform provider with the following configuration (CI/CD):
+- ![Terraform v1.5.7](https://img.shields.io/badge/Terraform-1.5.7-orange?logo=terraform) / ![OpenTofu 1.10.5](https://img.shields.io/badge/Terraform-1.10.5-peachpuff?logo=opentofu) (tested with both)
+- <img src="https://raw.githubusercontent.com/homarr-labs/dashboard-icons/refs/heads/main/svg/zitadel-light.svg" width="16"> Zitadel **v4.3.3**
+- ![PostgreSQL 17](https://img.shields.io/badge/PostgreSQL-17-lightcyan?logo=postgresql)
+
+It also works in my [divStar/homelab project](https://github.com/divStar/homelab/blob/feature/gitops/modules/cluster/modules/platform/modules/pgadmin/main.tf) (I have not committed the latest changes, but they will be there).
 
 This provider might work for an earlier version of Zitadel, but I have not tested it.
 
 ## Current issues:
 
-* Acceptance tests only *partially* work, but my aim is to make them work for the couple resources, that the provider implements.
+* Acceptance tests work in CI.
+* Acceptance tests do not completely cover all error cases, just the most likely ones.
 * Only one data source and two sources are supported.
-* There are no releases yet since CI/CD is not yet configured.
+* There is currently **no release** of this provider, because I have not yet figured out the `goreleaser` and the GPG signing yet. I am aiming to complete this sooner rather than later.
