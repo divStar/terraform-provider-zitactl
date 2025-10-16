@@ -1,4 +1,7 @@
 #!/bin/bash
+# Copyright (c) Igor Voronin
+# SPDX-License-Identifier: MIT
+
 # This script unlocks the GPG key in gpg-agent using a passphrase from
 # environment variable or MacOS Keychain.
 
