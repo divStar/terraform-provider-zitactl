@@ -46,7 +46,7 @@ test-release:
 	# This target needs the GPG_FINGERPRINT environment variable to be set.
 	# Use e.g. `gpg --list-secret-keys --with-colons | awk -F: '/^fpr:/ {print $10; exit}'` to acquire it.
 	@source ./get-gpg-passphrase.sh && \
-	goreleaser release --snapshot --clean --config ".goreleaser.yml"
+	goreleaser release --snapshot --clean
 
 ##@ Test infrastructure
 zitadel-up:

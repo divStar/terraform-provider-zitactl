@@ -1,32 +1,38 @@
 #!/bin/bash
-# This script determines where to read the GPG passphrase from.
-# It will fail if no passphrase is available.
+# This script unlocks the GPG key in gpg-agent using a passphrase from
+# environment variable or MacOS Keychain.
 
 GPG_PASS=""
 
 if command -v security >/dev/null 2>&1; then
   GPG_PASS=$(security find-generic-password -a "$USER" -s "gpg-passphrase" -w 2>/dev/null || echo "")
-  [ -n "$GPG_PASS" ] && echo "  • ✅  Using GPG passphrase from MacOS Keychain" >&2
+  [ -n "$GPG_PASS" ] && echo "  • ✅  Using GPG passphrase from MacOS Keychain"
 fi
 
 if [ -z "$GPG_PASS" ] && [ -n "$GPG_PASSPHRASE" ]; then
   GPG_PASS="$GPG_PASSPHRASE"
-  echo "  • ✅  Using GPG passphrase from environment variable" >&2
+  echo "  • ✅  Using GPG passphrase from environment variable"
 fi
 
-if [ -n "$GPG_PASS" ]; then
-  GPG_PASSPHRASE="$GPG_PASS"
-  export GPG_PASSPHRASE
-else
-  echo "  • ❌  No GPG passphrase found!" >&2
-  echo "" >&2
-  echo "Please set the passphrase using one of these methods:" >&2
+if [ -z "$GPG_PASS" ]; then
+  echo "  • ❌  No GPG passphrase found!"
+  echo ""
+  echo "Please set the passphrase using one of these methods:"
   if command -v security >/dev/null 2>&1; then
-    echo "   * Store in MacOS Keychain:" >&2
-    echo "     security add-generic-password -a \"\$USER\" -s \"gpg-passphrase\" -w \"your_passphrase\"" >&2
+    echo "   * Store in MacOS Keychain:"
+    echo "     security add-generic-password -a \"\$USER\" -s \"gpg-passphrase\" -w \"your_passphrase\""
   fi
-  echo "   * Set environment variable:" >&2
-  echo "     export GPG_PASSPHRASE=\"your_passphrase\"" >&2
-  echo "" >&2
+  echo "   * Set environment variable:"
+  echo "     export GPG_PASSPHRASE=\"your_passphrase\""
+  echo ""
+  exit 1
+fi
+
+# Unlock the key in gpg-agent by performing a test sign operation
+echo "  • 🔐  Unlocking GPG key in gpg-agent..."
+if gpg --batch --yes --pinentry-mode loopback --passphrase "$GPG_PASS" --sign --local-user "$GPG_FINGERPRINT" --armor </dev/null >/dev/null 2>&1; then
+  echo "  • ✅  GPG key unlocked and cached in gpg-agent"
+else
+  echo "  • ❌  Failed to unlock GPG key"
   exit 1
 fi
