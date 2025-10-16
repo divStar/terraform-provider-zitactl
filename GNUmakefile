@@ -42,6 +42,12 @@ testacc:
 	ZITACTL_SERVICE_ACCOUNT_KEY="$$ZITACTL_SERVICE_ACCOUNT_KEY" \
 	go test -v -cover -timeout 120m ./...
 
+test-release:
+	# This target needs the GPG_FINGERPRINT environment variable to be set.
+	# Use e.g. `gpg --list-secret-keys --with-colons | awk -F: '/^fpr:/ {print $10; exit}'` to acquire it.
+	@source ./get-gpg-passphrase.sh && \
+	goreleaser release --snapshot --clean --config ".goreleaser.yml"
+
 ##@ Test infrastructure
 zitadel-up:
 	docker compose -f ./tools/docker-compose.yml up -d --wait
@@ -58,4 +64,4 @@ help: ## Show this help message
 	@echo ''
 	@sed -n -e 's/^##@ \(.*\)/\n\1:/p' -e 's/^\([a-zA-Z_-]*\):.*/  \1/p' $(MAKEFILE_LIST)
 
-.PHONY: default build artifact install lint generate fmt test testacc zitadel-up zitadel-down zitadel-logs help
+.PHONY: default build artifact install lint generate fmt test testacc test-release zitadel-down zitadel-logs help
