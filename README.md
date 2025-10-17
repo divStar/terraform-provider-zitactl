@@ -55,32 +55,8 @@ with OIDC/OAuth2 authentication in one go.
 
 ## Requirements
 
-- ![Terraform v1.5.7](https://img.shields.io/badge/Terraform-1.5.7-orange?logo=terraform) or ![OpenTofu 1.10.5](https://img.shields.io/badge/Terraform-1.10.5-peachpuff?logo=opentofu)
+- at least ![Terraform v1.5.7](https://img.shields.io/badge/Terraform-1.5.7-orange?logo=terraform) or ![OpenTofu 1.10.5](https://img.shields.io/badge/Terraform-1.10.5-peachpuff?logo=opentofu)
 - ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/divStar/terraform-provider-zitactl?style=flat&logo=go)
-
-## Building The Provider
-
-1. Clone the repository
-1. Enter the repository directory
-1. Build the provider using the Go `install` command:
-
-```shell
-go install
-```
-
-## Adding Dependencies
-
-This provider uses [Go modules](https://github.com/golang/go/wiki/Modules).
-Please see the Go documentation for the most up to date information about using Go modules.
-
-To add a new dependency `github.com/author/dependency` to your Terraform provider:
-
-```shell
-go get github.com/author/dependency
-go mod tidy
-```
-
-Then commit the changes to `go.mod` and `go.sum`.
 
 ## Using the provider
 
@@ -152,37 +128,18 @@ The beauty of the provider configuration is, that variables and outputs **do not
 The client configuration is deferred until the first data source or resource is created. Only if the configuration
 fails at that time, because e.g. some variables could not be resolved, an error is thrown.
 
-## Developing the Provider
-
-If you wish to work on the provider, you'll first need [Go](http://www.golang.org) installed on your machine (see [Requirements](#requirements) above).
-
-To compile the provider, run `go install`. This will build the provider and put the provider binary in the `$GOPATH/bin` directory.
-
-To generate or update documentation, run `make generate`.
-
-In order to run the full suite of Acceptance tests, run `make testacc`.
-
-*Note:* Acceptance tests create real resources, and often cost money to run. If you create acceptance tests, please
-ensure, that you have successfully run them on your computer first.
-
-```shell
-make testacc
-```
-
 ## Tested configuration
 
-I have tested this Terraform provider with the following configuration (CI/CD):
-- ![Terraform v1.5.7](https://img.shields.io/badge/Terraform-1.5.7-orange?logo=terraform) / ![OpenTofu 1.10.5](https://img.shields.io/badge/Terraform-1.10.5-peachpuff?logo=opentofu) (tested with both)
+This Terraform provider has been tested with the following configuration in CI/CD and local development:
+- ![Terraform v1.5.7](https://img.shields.io/badge/Terraform-1.5.7-orange?logo=terraform) / ![OpenTofu 1.10.5](https://img.shields.io/badge/Terraform-1.10.5-peachpuff?logo=opentofu)
 - <img src="https://raw.githubusercontent.com/homarr-labs/dashboard-icons/refs/heads/main/svg/zitadel-light.svg" width="16"> Zitadel **v4.3.3**
 - ![PostgreSQL 17](https://img.shields.io/badge/PostgreSQL-17-lightcyan?logo=postgresql)
 
-It also works in my [divStar/homelab project](https://github.com/divStar/homelab/blob/feature/gitops/modules/cluster/modules/platform/modules/pgadmin/main.tf) (I have not committed the latest changes, but they will be there).
+The versions above match those defined in `./tools/docker-compose.yml` used for acceptance testing.
 
-This provider might work for an earlier version of Zitadel, but I have not tested it.
+This provider is also used in production in my [divStar/homelab project](https://github.com/divStar/homelab) for managing Zitadel authentication.
 
-## Current issues:
+## Known issues:
 
-* Acceptance tests work in CI.
 * Acceptance tests do not completely cover all error cases, just the most likely ones.
-* Only one data source and two sources are supported.
-* There is currently **no release** of this provider, because I have not yet figured out the `goreleaser` and the GPG signing yet. I am aiming to complete this sooner rather than later.
+* Only one data source and two sources are supported. (will not change for now unless someone creates PRs)

@@ -20,7 +20,7 @@ permissions:
   contents: read
 
 jobs:
-  # Step 1: Lint
+  # Lint
   lint:
     name: Lint
     runs-on: ubuntu-latest
@@ -41,7 +41,7 @@ jobs:
       - name: Run make lint
         run: make lint
 
-  # Step 2: Build
+  # Build
   build:
     name: Build
     needs: lint
@@ -58,10 +58,62 @@ jobs:
       - name: Run make build
         run: make build
 
-  # Step 3: Unit tests
-  test:
-    name: Unit Tests
+  # Verify documentation and/or license headers are up to date
+  generate:
+    name: Generate
     needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: latest
+          terraform_wrapper: false
+
+      - name: Run make generate
+        run: make generate
+
+      - name: Verify documentation and/or license headers are up to date
+        run: |
+          if ! git diff --compact-summary --exit-code; then
+            echo "❌ Error: documentation and/or license headers are not up to date"
+            echo ""
+            echo "The following files have uncommitted changes after running 'make generate':"
+            git diff --compact-summary
+            echo ""
+            echo "To fix this, run `make generate`, review the changes, add, commit and push them."
+            exit 1
+          fi
+          echo "✅ All generated files are up to date"
+
+  # Detect changes in source code
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      internal: ${{ steps.filter.outputs.internal }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            internal:
+              - 'internal/**'
+
+  # Unit tests
+  test:
+    if: needs.changes.outputs.internal == 'true'
+    name: Unit Tests
+    needs: [changes, build]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -75,10 +127,11 @@ jobs:
       - name: Run make test
         run: make test
 
-  # Step 3: acceptance tests for Terraform and OpenTofu (using '../tools/docker-compose.yml')
+  # Acceptance tests for Terraform and OpenTofu (using '../tools/docker-compose.yml')
   test-acceptance:
+    if: needs.changes.outputs.internal == 'true'
     name: Acceptance Tests (${{ matrix.tool }})
-    needs: build
+    needs: [changes, build]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
@@ -123,30 +176,3 @@ jobs:
       - name: Stop Zitadel
         if: always()
         run: make zitadel-down
-
-  # Step 4: Generate license headers and docs
-  generate:
-    name: Generate
-    needs: [ test, test-acceptance ]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: 'go.mod'
-          cache: true
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: latest
-          terraform_wrapper: false
-
-      - name: Run make generate
-        run: make generate
-
-      - name: Verify no uncommitted changes
-        run: |
-          git diff --compact-summary --exit-code || \
-            (echo; echo "Unexpected difference after 'make generate'. Run 'make generate' and commit the changes."; exit 1)

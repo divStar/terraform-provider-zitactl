@@ -1,12 +1,16 @@
-## Related Issue
+## What does this PR do?
 
-Fixes # <!-- INSERT ISSUE NUMBER -->
+<!-- Briefly describe what you're changing and why -->
 
-## Description
+## Related Issue (if applicable)
 
-In plain English, describe your approach to addressing the issue linked above.
-For example, if you made a particular design decision, let us know why you chose this path instead of another solution.
+<!-- If applicable: Fixes #123 or Related to #123 -->
+<!-- Otherwise: N/A -->
 
-## Changes to Security Controls
+## Checklist
 
-Are there any changes to security controls (access controls, encryption, logging) in this pull request? If so, explain.
+- [ ] I have read the [Contributing Guidelines](https://github.com/divStar/terraform-provider-zitactl/blob/master/.github/CONTRIBUTING.md).
+- [ ] I have updated the relevant documentation.
+- [ ] I have added tests that prove the fix or feature works and run them locally.
+- [ ] I have run `make generate` and committed any changes.
+- [ ] I have read the [Code of conduct](https://github.com/divStar/terraform-provider-zitactl/blob/master/.github/CODE_OF_CONDUCT.md).
