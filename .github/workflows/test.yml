@@ -20,6 +20,22 @@ permissions:
   contents: read
 
 jobs:
+  # Step 0: Detect changes
+  internal:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      internal: ${{ steps.filter.outputs.internal }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            internal:
+              - 'internal/**'
+
   # Step 1: Lint
   lint:
     name: Lint
@@ -60,6 +76,7 @@ jobs:
 
   # Step 3: Unit tests
   test:
+    if: needs.internal.outputs.internal == 'true'
     name: Unit Tests
     needs: build
     runs-on: ubuntu-latest
@@ -77,6 +94,7 @@ jobs:
 
   # Step 3: acceptance tests for Terraform and OpenTofu (using '../tools/docker-compose.yml')
   test-acceptance:
+    if: needs.internal.outputs.internal == 'true'
     name: Acceptance Tests (${{ matrix.tool }})
     needs: build
     runs-on: ubuntu-latest
