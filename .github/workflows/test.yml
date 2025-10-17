@@ -61,7 +61,7 @@ jobs:
   # Verify documentation and/or license headers are up to date
   generate:
     name: Generate
-    needs: [ test, test-acceptance ]
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
