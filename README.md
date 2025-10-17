@@ -55,32 +55,8 @@ with OIDC/OAuth2 authentication in one go.
 
 ## Requirements
 
-- ![Terraform v1.5.7](https://img.shields.io/badge/Terraform-1.5.7-orange?logo=terraform) or ![OpenTofu 1.10.5](https://img.shields.io/badge/Terraform-1.10.5-peachpuff?logo=opentofu)
+- at least ![Terraform v1.5.7](https://img.shields.io/badge/Terraform-1.5.7-orange?logo=terraform) or ![OpenTofu 1.10.5](https://img.shields.io/badge/Terraform-1.10.5-peachpuff?logo=opentofu)
 - ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/divStar/terraform-provider-zitactl?style=flat&logo=go)
-
-## Building The Provider
-
-1. Clone the repository
-1. Enter the repository directory
-1. Build the provider using the Go `install` command:
-
-```shell
-go install
-```
-
-## Adding Dependencies
-
-This provider uses [Go modules](https://github.com/golang/go/wiki/Modules).
-Please see the Go documentation for the most up to date information about using Go modules.
-
-To add a new dependency `github.com/author/dependency` to your Terraform provider:
-
-```shell
-go get github.com/author/dependency
-go mod tidy
-```
-
-Then commit the changes to `go.mod` and `go.sum`.
 
 ## Using the provider
 
@@ -154,35 +130,172 @@ fails at that time, because e.g. some variables could not be resolved, an error 
 
 ## Developing the Provider
 
-If you wish to work on the provider, you'll first need [Go](http://www.golang.org) installed on your machine (see [Requirements](#requirements) above).
+Make sure you have Go installed on your system and the version matches the version specified in the `go.mod` file.
+It is also advisable to have `make` installed in order to use targets defined in the `GNUmakefile`.
 
-To compile the provider, run `go install`. This will build the provider and put the provider binary in the `$GOPATH/bin` directory.
+For running acceptance tests, you'll need Docker (or Docker Desktop) installed and running, as the tests require a local Zitadel instance.
 
-To generate or update documentation, run `make generate`.
+### `GNUmakefile` targets
 
-In order to run the full suite of Acceptance tests, run `make testacc`.
+#### `default` target
 
-*Note:* Acceptance tests create real resources, and often cost money to run. If you create acceptance tests, please
-ensure, that you have successfully run them on your computer first.
+Runs the standard development workflow: formats code, runs linters, and builds the provider.
+```bash
+make
+# or explicitly:
+make default
+```
 
-```shell
+This is equivalent to running `make fmt lint build`.
+
+#### `build` target
+
+Compiles and builds the provider to verify that all packages compile successfully.
+
+> [!NOTE]
+> This target does not produce a binary. Use `make artifact` to create a binary in the root directory of the project.
+
+#### `artifact` target
+
+Compiles and builds the provider with debug flags (`-gcflags="all=-N -l"`) and produces a binary in the root directory of the project.
+
+This target is useful for building a binary for local testing or debugging.
+
+#### `lint` target
+
+Runs `golangci-lint` to check code quality and style issues.
+
+#### `generate` target
+
+Generates copyright headers (using `copywrite`) and Terraform provider documentation (using `tfplugindocs`).
+
+#### `fmt` target
+
+Formats all Go code in the project using `gofmt`.
+
+#### `test` target
+
+Runs unit tests with coverage reporting.
+```bash
+make test
+```
+
+#### `testacc` target
+
+Runs acceptance tests against a Zitadel instance.
+
+> [!NOTE]
+> Requires a running Zitadel instance (see [Test Infrastructure](#test-infrastructure) below).
+
+```bash
 make testacc
 ```
 
+**Environment variables:**
+- `ZITACTL_DOMAIN` - the domain of your Zitadel instance (default: `localhost`)
+- `ZITACTL_SKIP_TLS_VERIFICATION` - set to `true` to skip TLS certificate verification (default: `false`). Required when using the local Docker setup.
+- `ZITACTL_SERVICE_ACCOUNT_KEY` - the machine key JSON for authenticating with Zitadel. If not set, the target will attempt to read from `./tools/serviceaccount/zitadel-admin-sa.json`
+
+**Examples:**
+
+##### Using the local Docker setup (default)
+
+```bash
+make zitadel-up
+make testacc
+make zitadel-down
+```
+
+##### Testing against a real running Zitadel instance with valid SSL certificates
+
+```bash
+ZITACTL_DOMAIN=zitadel.my.domain \
+ZITACTL_SKIP_TLS_VERIFICATION=false \
+ZITACTL_SERVICE_ACCOUNT_KEY='{"type":"serviceaccount",...}' \
+make testacc
+```
+
+#### `test-release` target
+
+Simulates a GoReleaser release locally using `--snapshot` mode.
+Useful for debugging release configuration issues before pushing a tag.
+
+> [!NOTE]
+> Requires the `GPG_FINGERPRINT` environment variable to be set.
+> Have a look at the `./get-gpg-passphrase.sh` script to see how to set up GPG with this project.
+
+#### Test Infrastructure
+
+The following targets manage a local Docker Compose stack that provides PostgreSQL and Zitadel
+for development and acceptance testing.
+
+##### `zitadel-up` target
+
+Starts the local Zitadel test infrastructure (PostgreSQL and Zitadel) in Docker.
+```bash
+make zitadel-up
+```
+
+This is required before running acceptance tests with `make testacc` and it's what the `test.yml` CI pipeline uses.
+
+##### `zitadel-down` target
+
+Stops and tears down the local Zitadel test infrastructure.
+```bash
+make zitadel-down
+```
+
+##### `zitadel-logs` target
+
+Follows the logs of the running Zitadel Docker Compose stack.
+```bash
+make zitadel-logs
+```
+
+This can be useful if you have to debug some odd behavior.
+
+### Typical Development Workflow
+
+1. Create a new feature branch.
+2. Make your changes to the code.
+3. Run `make` to format, lint, build, and generate documentation
+4. Unit tests do not require a running Zitadel instance, therefore the following command suffices:
+    ```bash
+       make test
+    ```
+5. Develop and run acceptance tests (they are **not** optional):
+    ```bash
+    make zitadel-up      # Start test infrastructure
+    make testacc         # Run acceptance tests
+    make zitadel-down    # Clean up when done
+    ```
+
+### Adding or updating dependencies
+
+This provider uses [Go modules](https://github.com/golang/go/wiki/Modules).
+Please see the Go documentation for the most up to date information about using Go modules.
+
+To add a new dependency `github.com/author/dependency` to your Terraform provider:
+
+```shell
+go get github.com/author/dependency
+go mod tidy
+```
+
+Then commit the changes to `go.mod` and `go.sum`.
+
 ## Tested configuration
 
-I have tested this Terraform provider with the following configuration (CI/CD):
-- ![Terraform v1.5.7](https://img.shields.io/badge/Terraform-1.5.7-orange?logo=terraform) / ![OpenTofu 1.10.5](https://img.shields.io/badge/Terraform-1.10.5-peachpuff?logo=opentofu) (tested with both)
+This Terraform provider has been tested with the following configuration in CI/CD and local development:
+- ![Terraform v1.5.7](https://img.shields.io/badge/Terraform-1.5.7-orange?logo=terraform) / ![OpenTofu 1.10.5](https://img.shields.io/badge/Terraform-1.10.5-peachpuff?logo=opentofu)
 - <img src="https://raw.githubusercontent.com/homarr-labs/dashboard-icons/refs/heads/main/svg/zitadel-light.svg" width="16"> Zitadel **v4.3.3**
 - ![PostgreSQL 17](https://img.shields.io/badge/PostgreSQL-17-lightcyan?logo=postgresql)
 
-It also works in my [divStar/homelab project](https://github.com/divStar/homelab/blob/feature/gitops/modules/cluster/modules/platform/modules/pgadmin/main.tf) (I have not committed the latest changes, but they will be there).
+The versions above match those defined in `./tools/docker-compose.yml` used for acceptance testing.
 
-This provider might work for an earlier version of Zitadel, but I have not tested it.
+This provider is also used in production in my [divStar/homelab project](https://github.com/divStar/homelab) for managing Zitadel authentication.
 
-## Current issues:
+## Known issues:
 
-* Acceptance tests work in CI.
 * Acceptance tests do not completely cover all error cases, just the most likely ones.
-* Only one data source and two sources are supported.
-* There is currently **no release** of this provider, because I have not yet figured out the `goreleaser` and the GPG signing yet. I am aiming to complete this sooner rather than later.
+* Only one data source and two sources are supported. (will not change for now unless someone creates PRs)

@@ -2,7 +2,7 @@ ARTIFACT_NAME := $(shell grep "^module " go.mod | awk '{print $$2}' | xargs base
 SERVICE_ACCOUNT_KEY_FILE := ./tools/serviceaccount/zitadel-admin-sa.json
 
 ##@ Default target
-default: fmt lint install generate
+default: fmt lint build
 
 ##@ Build Targets
 build:
@@ -10,9 +10,6 @@ build:
 
 artifact:
 	go build -gcflags="all=-N -l" -o $(ARTIFACT_NAME)
-
-install: build
-	go install -v ./...
 
 ##@ Code Quality
 lint:
