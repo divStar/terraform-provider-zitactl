@@ -108,6 +108,8 @@ jobs:
           filters: |
             internal:
               - 'internal/**'
+              - 'go.mod'
+              - 'go.sum'
 
   # Unit tests
   test:
