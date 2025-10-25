@@ -45,6 +45,8 @@ test-release:
 	@source ./get-gpg-passphrase.sh && \
 	goreleaser release --snapshot --clean
 
+test-local: fmt lint build generate test zitadel-up testacc zitadel-down
+
 ##@ Test infrastructure
 zitadel-up:
 	docker compose -f ./tools/docker-compose.yml up -d --wait
@@ -61,4 +63,4 @@ help: ## Show this help message
 	@echo ''
 	@sed -n -e 's/^##@ \(.*\)/\n\1:/p' -e 's/^\([a-zA-Z_-]*\):.*/  \1/p' $(MAKEFILE_LIST)
 
-.PHONY: default build artifact install lint generate fmt test testacc test-release zitadel-down zitadel-logs help
+.PHONY: default build artifact install lint generate fmt test testacc test-release test-local zitadel-down zitadel-logs help

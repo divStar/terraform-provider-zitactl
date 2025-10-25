@@ -94,6 +94,23 @@ func (d *OrgsDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	// Lazy client initialization
 	zitadelClient, errClientCreation := d.clientInfo.GetClient(ctx)
 	if errClientCreation != nil {
+		// Check if this is due to unknown provider configuration during plan refresh
+		if d.clientInfo.Config != nil {
+			hasUnknown := d.clientInfo.Config.Domain.IsUnknown() ||
+				d.clientInfo.Config.SkipTlsVerification.IsUnknown() ||
+				d.clientInfo.Config.ServiceAccountKey.IsUnknown()
+
+			if hasUnknown {
+				// During plan phase with unknown provider config, we cannot refresh -> return WITHOUT an error, keep the existing state
+				tflog.Warn(ctx, "Skipping refresh due to unknown provider configuration", map[string]any{
+					"name":        data.Name.ValueString(),
+					"ids":         data.Ids,
+					"name_method": data.NameMethod.ValueString(),
+				})
+				return
+			}
+		}
+
 		resp.Diagnostics.AddError("Client configuration not possible!", errClientCreation.Error())
 		return
 	}
