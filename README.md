@@ -141,5 +141,6 @@ This provider is also used in production in my [divStar/homelab project](https:/
 
 ## Known issues:
 
-* Acceptance tests do not completely cover all error cases, just the most likely ones.
-* Only one data source and two sources are supported. (will not change for now unless someone creates PRs)
+* Limited amount of data sources and resources.
+* #7 fixes the issue of `Read` functions being called during a resource state refresh or early data-source read.
+This should make it possible to e.g. run `tofu apply` (or `tofu plan`) a second time to update everything without issues.

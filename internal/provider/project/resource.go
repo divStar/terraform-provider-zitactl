@@ -188,7 +188,6 @@ func (r *ProjectResource) Create(ctx context.Context, req resource.CreateRequest
 	resp.State = readResp.State
 }
 
-// Read reads a Zitadel project resource (`_project`) from the Zitadel instance.
 func (r *ProjectResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var data ProjectResourceModel
 
@@ -197,13 +196,30 @@ func (r *ProjectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	// Lazy client initialization
+	// Try to get client - it may fail if provider config has unknown values
 	zitadelClient, errClientCreation := r.clientInfo.GetClient(ctx)
 	if errClientCreation != nil {
+		// Check if this is due to unknown provider configuration during plan refresh
+		if r.clientInfo.Config != nil {
+			hasUnknown := r.clientInfo.Config.Domain.IsUnknown() ||
+				r.clientInfo.Config.SkipTlsVerification.IsUnknown() ||
+				r.clientInfo.Config.ServiceAccountKey.IsUnknown()
+
+			if hasUnknown {
+				// During plan phase with unknown provider config, we cannot refresh -> return WITHOUT an error, keep the existing state
+				tflog.Warn(ctx, "Skipping refresh due to unknown provider configuration", map[string]any{
+					"id": data.Id.ValueString(),
+				})
+				return
+			}
+		}
+
+		// For other errors, this is a real problem
 		resp.Diagnostics.AddError("Client configuration not possible!", errClientCreation.Error())
 		return
 	}
 
+	// Normal read logic when client is available
 	projectId := data.Id.ValueString()
 	orgId := data.OrgId.ValueString()
 
@@ -231,6 +247,7 @@ func (r *ProjectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
+	// Update state with fresh data
 	retrievedProject := queryResponse.GetProject()
 	if retrievedProject != nil {
 		data.Name = types.StringValue(retrievedProject.GetName())

@@ -28,6 +28,21 @@ func (r *ApplicationOIDCResource) Read(ctx context.Context, req resource.ReadReq
 	// Lazy client initialization
 	zitadelClient, errClientCreation := r.clientInfo.GetClient(ctx)
 	if errClientCreation != nil {
+		// Check if this is due to unknown provider configuration during plan refresh
+		if r.clientInfo.Config != nil {
+			hasUnknown := r.clientInfo.Config.Domain.IsUnknown() ||
+				r.clientInfo.Config.SkipTlsVerification.IsUnknown() ||
+				r.clientInfo.Config.ServiceAccountKey.IsUnknown()
+
+			if hasUnknown {
+				// During plan phase with unknown provider config, we cannot refresh -> return WITHOUT an error, keep the existing state
+				tflog.Warn(ctx, "Skipping refresh due to unknown provider configuration", map[string]any{
+					"id": data.Id.ValueString(),
+				})
+				return
+			}
+		}
+
 		resp.Diagnostics.AddError("Client configuration not possible!", errClientCreation.Error())
 		return
 	}
