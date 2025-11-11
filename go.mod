@@ -8,7 +8,7 @@ require (
 	github.com/hashicorp/terraform-plugin-log v0.9.0
 	github.com/hashicorp/terraform-plugin-testing v1.13.3
 	github.com/zitadel/oidc/v3 v3.45.0
-	github.com/zitadel/zitadel-go/v3 v3.14.0
+	github.com/zitadel/zitadel-go/v3 v3.16.0
 	google.golang.org/grpc v1.76.0
 	google.golang.org/protobuf v1.36.10
 )
