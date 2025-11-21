@@ -5,7 +5,7 @@ go 1.25.2
 require (
 	github.com/hashicorp/terraform-plugin-framework v1.16.1
 	github.com/hashicorp/terraform-plugin-go v0.29.0
-	github.com/hashicorp/terraform-plugin-log v0.9.0
+	github.com/hashicorp/terraform-plugin-log v0.10.0
 	github.com/hashicorp/terraform-plugin-testing v1.13.3
 	github.com/zitadel/oidc/v3 v3.45.0
 	github.com/zitadel/zitadel-go/v3 v3.14.0
