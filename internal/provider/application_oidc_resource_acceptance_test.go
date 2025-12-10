@@ -189,6 +189,7 @@ func testAccApplicationOIDCResourceConfig(orgName, appName string, devMode bool,
 	}
 
 	return fmt.Sprintf(`
+# Some comment
 data "zitactl_orgs" "test" {
   name = %[1]q
 }
