@@ -3,18 +3,9 @@ name: CI
 
 on:
   pull_request:
-    paths-ignore:
-      - 'README.md'
-      - 'CHANGELOG.md'
-      - 'website/**'
   push:
     branches:
       - master
-      - main
-    paths-ignore:
-      - 'README.md'
-      - 'CHANGELOG.md'
-      - 'website/**'
 
 permissions:
   contents: read
@@ -99,11 +90,7 @@ jobs:
     permissions:
       pull-requests: read
     outputs:
-      internal: >-
-        ${{
-          steps.filter.outputs.internal ||
-          github.event_name == 'push' && github.ref == 'refs/heads/master'
-        }}
+      internal: ${{ steps.filter.outputs.internal == 'true' || (github.event_name == 'push' && github.ref == 'refs/heads/master') }}
     steps:
       - uses: actions/checkout@v6
       - uses: dorny/paths-filter@v3
