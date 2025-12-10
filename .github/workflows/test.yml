@@ -147,6 +147,11 @@ jobs:
           go-version-file: 'go.mod'
           cache: true
 
+      - name: Cache Docker images
+        uses: ScribeMD/docker-cache@0.5.0
+        with:
+          key: docker-${{ runner.os }}-${{ hashFiles('tools/docker-compose.yml') }}
+
       - name: Setup Terraform
         if: matrix.tool == 'terraform'
         uses: hashicorp/setup-terraform@v3
