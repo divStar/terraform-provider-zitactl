@@ -99,7 +99,11 @@ jobs:
     permissions:
       pull-requests: read
     outputs:
-      internal: ${{ steps.filter.outputs.internal }}
+      internal: >-
+        ${{
+          steps.filter.outputs.internal ||
+          github.event_name == 'push' && github.ref == 'refs/heads/master'
+        }}
     steps:
       - uses: actions/checkout@v6
       - uses: dorny/paths-filter@v3
