@@ -4,7 +4,7 @@
 
 # `terraform-provider-zitactl` Terraform Provider for Zitadel v4
 
-## Thanks
+## Thank you!
 
 Many thanks to the [Zitadel](https://zitadel.com) team for their great work on Zitadel, the Zitadel Go library and
 their Terraform provider! I am happy to be able to use these applications free of charge at home.
