@@ -65,11 +65,10 @@ services:
       ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINEKEY_TYPE: 1
       ZITADEL_FIRSTINSTANCE_ORG_MACHINE_PAT_EXPIRATIONDATE: "2099-01-01T00:00:00Z"
 
-      # Activate the login v2 on an installation from scratch.
-      # To activate the login v2 on an existing installation, read the "What's next" section.
+      # Login V2 configuration (NOT used - no login UI in test setup needed)
+      # These settings would be relevant if testing browser-based authentication
       ZITADEL_DEFAULTINSTANCE_FEATURES_LOGINV2_REQUIRED: true # To use the login v1, set this to false.
       ZITADEL_DEFAULTINSTANCE_FEATURES_LOGINV2_BASEURI: http://localhost:3000/ui/v2/login
-      # Configure the redirection paths to the login v2.
       ZITADEL_OIDC_DEFAULTLOGINURLV2: http://localhost:3000/ui/v2/login/login?authRequest=
       ZITADEL_OIDC_DEFAULTLOGOUTURLV2: http://localhost:3000/ui/v2/login/logout?post_logout_redirect=
       ZITADEL_SAML_DEFAULTLOGINURLV2: http://localhost:3000/ui/v2/login/login?samlRequest=
@@ -84,6 +83,9 @@ services:
       start_period: 20s
     networks:
       - zitadel
+
+  # zitadel-login:
+  # This container is not needed, because we are testing a machine-to-machine flow, which does not require a login UI.
 
 networks:
   zitadel:
