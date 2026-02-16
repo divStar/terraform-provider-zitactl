@@ -9,7 +9,7 @@ require (
 	github.com/hashicorp/terraform-plugin-testing v1.14.0
 	github.com/zitadel/oidc/v3 v3.45.4
 	github.com/zitadel/zitadel-go/v3 v3.14.0
-	google.golang.org/grpc v1.79.0
+	google.golang.org/grpc v1.79.1
 	google.golang.org/protobuf v1.36.11
 )
 
